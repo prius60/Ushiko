@@ -1,0 +1,6 @@
+discord
+validators
+PyNaCl
+youtube_search
+youtube_dl
+bilibili_api

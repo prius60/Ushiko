@@ -11,9 +11,6 @@ ssl._create_default_https_context = ssl._create_unverified_context
 ushiko = commands.Bot(command_prefix='')
 queue = media_queue.Queue()
 
-# Replace with your bot's token to activate
-ushiko.run('')
-
 
 @ushiko.event
 async def on_ready():
@@ -90,7 +87,7 @@ async def play(ctx, *args):
     else:
         voice = discord.utils.get(ushiko.voice_clients, guild=ctx.guild)
         keyword, source = media_fetcher.get_keyword(*args)
-        url = media_fetcher.get_url(keyword, source)
+        url = await media_fetcher.get_url(keyword, source)
         if queue.is_looping and (queue.current_song == "" or url == queue.current_song):
             queue.enqueue_with_priority(url)
         else:
@@ -218,3 +215,7 @@ async def pause(ctx):
         if x.channel == ctx.author.voice.channel:
             x.pause()
             queue.is_paused = True
+
+
+# Replace with your bot's token to activate
+ushiko.run('ODE1NDA0NTk1NzAyMjY3OTE0.YDr6tQ.aVNp4LlpIULvk0kG88yMM6Vk--Q')

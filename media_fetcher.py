@@ -3,13 +3,14 @@ from youtube_search import YoutubeSearch
 import discord
 import youtube_dl
 import bilibili_api
+from bilibili_api import misc
 import ssl
 
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
 
-def get_url(keyword, source: str = 'YouTube') -> str:
+async def get_url(keyword, source: str = 'YouTube') -> str:
     """Returns a media link from user's keyword, by either straight returning it
     or looking up one from keywords.
 
@@ -21,7 +22,8 @@ def get_url(keyword, source: str = 'YouTube') -> str:
         r = YoutubeSearch(keyword, max_results=1).to_dict()[0]['url_suffix']
         return f'https://youtube.com{r}'
     elif source.lower() == 'bili' or source.lower() == 'bilibili':
-        return bilibili_api.web_search_by_type(keyword, 'video')['result'][0]['arcurl']
+        result = await misc.web_search_by_type(keyword, 'video')
+        return result['result'][0]['arcurl']
     else:
         # TODO: add support for additional websites
         raise NotImplementedError

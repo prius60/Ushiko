@@ -218,4 +218,4 @@ async def pause(ctx):
 
 
 # Replace with your bot's token to activate
-ushiko.run('ODE1NDA0NTk1NzAyMjY3OTE0.YDr6tQ.aVNp4LlpIULvk0kG88yMM6Vk--Q')
+ushiko.run('')

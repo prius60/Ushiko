@@ -51,3 +51,15 @@ class Queue:
 
         """
         self._queue.clear()
+
+    def get_list(self):
+        """Return the list object that stores the queue
+
+        """
+        return self._queue
+
+    def remove(self, index):
+        """Remove the item in queue at index
+
+        """
+        self._queue.remove(index-1)

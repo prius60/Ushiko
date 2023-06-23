@@ -34,6 +34,11 @@ async def summon(ctx):
 
     """
     destination = ctx.author.voice.channel
+
+    # Disconnect if bot is connected to a different channel within the same server
+    for guild in ushiko.guilds:
+        if guild.voice_client is not None and guild == ctx.author.voice.channel.guild:
+            await guild.voice_client.disconnect(force=True)
     await destination.connect()
 
 
@@ -89,6 +94,7 @@ async def play(ctx, *args):
                 connected = True
         if not connected:
             await summon(ctx)
+            queue_dict[channel].clear()
             print('Ushiko is now connected to users voice channel')
         voice = discord.utils.get(ushiko.voice_clients, guild=ctx.guild)
         if 'youtu' in url:

@@ -37,7 +37,7 @@ async def summon(ctx):
 
     # Disconnect if bot is connected to a different channel within the same server
     for guild in ushiko.guilds:
-        if guild.voice_client is not None and guild == ctx.author.voice.channel.guild:
+        if guild.voice_client is not None and guild == ctx.guild:
             await guild.voice_client.disconnect(force=True)
     await destination.connect()
 
@@ -51,7 +51,6 @@ async def dismiss(ctx):
         if x.channel == ctx.author.voice.channel:
             if x.channel in queue_dict:
                 queue_dict.pop(x.channel)
-            await ctx.send(':pleading_face:')
             await x.disconnect(force=True)
             return
 

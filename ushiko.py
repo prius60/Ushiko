@@ -36,9 +36,8 @@ async def summon(ctx):
     destination = ctx.author.voice.channel
 
     # Disconnect if bot is connected to a different channel within the same server
-    for guild in ushiko.guilds:
-        if guild.voice_client is not None and guild == ctx.guild:
-            await guild.voice_client.disconnect(force=True)
+    if ctx.guild.voice_client is not None:
+        await ctx.guild.voice_client.disconnect(force=True)
     await destination.connect()
 
 
@@ -47,12 +46,11 @@ async def dismiss(ctx):
     """Dismiss Ushiko
 
     """
-    for x in ushiko.voice_clients:
-        if x.channel == ctx.author.voice.channel:
-            if x.channel in queue_dict:
-                queue_dict.pop(x.channel)
-            await x.disconnect(force=True)
-            return
+    vc = ctx.guild.voice_client
+    if vc is not None:
+        if vc.channel in queue_dict:
+            queue_dict.pop(vc.channel)
+        await vc.disconnect(force=True)
 
 
 @ushiko.command(aliases=['整活', '播放', '继续'])
@@ -69,11 +67,9 @@ async def play(ctx, *args):
         queue = queue_dict[channel]
     if len(args) == 0:
         if queue.is_paused:
-            for x in ushiko.voice_clients:
-                if x.channel == ctx.author.voice.channel:
-                    x.resume()
-                    queue.is_paused = False
-                    return
+            ctx.guild.voice_client.resume()
+            queue.is_paused = False
+            return
         elif queue.is_empty():
             await ctx.send(':x: **   Provide a link or search with keywords**')
     else:
@@ -84,32 +80,22 @@ async def play(ctx, *args):
         else:
             queue.enqueue(url)
 
-    voice = discord.utils.get(ushiko.voice_clients, guild=ctx.guild)
+    voice = ctx.guild.voice_client
     if voice is None or not voice.is_playing():
         url = queue.dequeue()
-        connected = False
-        for client in ushiko.voice_clients:
-            if client.channel == ctx.author.voice.channel:
-                connected = True
-        if not connected:
+        if voice is None:
             await summon(ctx)
             queue_dict[channel].clear()
             print('Ushiko is now connected to users voice channel')
-        voice = discord.utils.get(ushiko.voice_clients, guild=ctx.guild)
-        if 'youtu' in url:
-            voice.play(media_fetcher.get_audio_YouTube(url),
-                       after=lambda e: asyncio.run_coroutine_threadsafe(skip(ctx), ushiko.loop))
-            print('Ushiko is now playing media from YouTube')
-        else:
-            try:
-                voice.play(media_fetcher.get_audio_Bili(url),
-                           after=lambda e: asyncio.run_coroutine_threadsafe(skip(ctx), ushiko.loop))
-                print('Ushiko is now playing media from BiliBili')
-            except youtube_dl.utils.DownloadError:
-                await ctx.send(':x: **   Media source unsupported**')
+            voice = ctx.guild.voice_client
+        audio, title = media_fetcher.get_audio_and_title(url)
+        try:
+            voice.play(audio, after=lambda e: asyncio.run_coroutine_threadsafe(skip(ctx), ushiko.loop))
+        except youtube_dl.utils.DownloadError:
+            await ctx.send(':x: **   Media source unsupported**')
         if voice.is_playing() and not queue.is_looping:
-            await ctx.send(f'**Now playing: **' + f'{url}')
-            print(f'Playing {url}')
+            await ctx.send(f'**Now playing: **' + f'{title}')
+            print(f'Playing {title}')
     else:
         print(f'Added to playlist: {url}')
         await ctx.send(f'**Added to playlist: **{url}')
@@ -125,12 +111,8 @@ async def loop(ctx):
         queue = queue_dict[channel]
     else:
         return
-    if not queue.is_looping:
-        queue.is_looping = True
-        await ctx.send("**Now looping**")
-    else:
-        queue.is_looping = False
-        await ctx.send("**Looping is now off**")
+    queue.is_looping = not queue.is_looping
+    await ctx.send("**Now looping**" if not queue.is_looping else "**Looping is now off")
 
 
 @ushiko.command(aliases=['歌单', '播放列表'])
@@ -189,24 +171,22 @@ async def skip(ctx):
 
     """
     channel = ctx.author.voice.channel
-    if channel in queue_dict:
+    voice = ctx.guild.voice_client
+    if channel in queue_dict and voice is not None:
         queue = queue_dict[channel]
     else:
         return
-    for x in ushiko.voice_clients:
-        voice = discord.utils.get(ushiko.voice_clients, guild=ctx.guild)
-        if x.channel == ctx.author.voice.channel and voice.is_playing():
-            if queue.is_looping:
-                queue.is_looping = False
-            x.stop()
-            queue.current_song = ''
-            break
-        elif x.channel == ctx.author.voice.channel and not voice.is_playing():
-            if queue.is_looping:
-                await play(ctx, queue.current_song)
-            elif not queue.is_empty():
-                await play(ctx)
-            break
+
+    if voice.is_playing():
+        if queue.is_looping:
+            queue.is_looping = False
+        await stop(ctx)
+        queue.current_song = ''
+    else:
+        if queue.is_looping:
+            await play(ctx, queue.current_song)
+        elif not queue.is_empty():
+            await play(ctx)
 
 
 @ushiko.command()
@@ -214,11 +194,7 @@ async def stop(ctx):
     """Stop the current playing song
 
     """
-    channel = ctx.author.voice.channel
-    # queue = queue_dict[channel]
-    for x in ushiko.voice_clients:
-        if x.channel == channel:
-            x.stop()
+    ctx.guild.voice_client.stop()
 
 
 @ushiko.command(aliases=['暂停'])
@@ -227,12 +203,9 @@ async def pause(ctx):
 
     """
     channel = ctx.author.voice.channel
-    for x in ushiko.voice_clients:
-        if x.channel == channel:
-            x.pause()
-            if channel in queue_dict:
-                queue = queue_dict[channel]
-                queue.is_paused = True
+    ctx.guild.voice_client.pause()
+    if channel in queue_dict:
+        queue_dict[channel].is_paused = True
 
 
 # Replace with your bot's token to activate

@@ -2,7 +2,6 @@ import validators
 from youtube_search import YoutubeSearch
 import discord
 import youtube_dl
-import bilibili_api
 from bilibili_api import misc
 import ssl
 
@@ -46,8 +45,8 @@ def get_keyword(*args) -> (str, str):
     return keyword, source
 
 
-def get_audio_YouTube(url: str) -> discord.FFmpegOpusAudio:
-    """Return an Opus audio from YouTube <url> provided
+def get_audio_and_title(url: str) -> (discord.FFmpegOpusAudio, str):
+    """Return an Opus audio from <url> provided
 
     """
     ydl_opts = {
@@ -62,28 +61,8 @@ def get_audio_YouTube(url: str) -> discord.FFmpegOpusAudio:
         ydl.cache.remove()
         info = ydl.extract_info(url, download=False)
     url = info['formats'][0]['url']
+    title = info.get('title', url)
     ffmpeg_opts = {'before_options': '-reconnect 1 -reconnect_streamed 1'
                                      ' -reconnect_delay_max 5',
                    'options': '-vn'}
-    return discord.FFmpegOpusAudio(url, **ffmpeg_opts)
-
-
-def get_audio_Bili(url: str) -> discord.FFmpegPCMAudio:
-    """Return an PCM audio from Bilibili <url> provided
-
-    """
-    ydl_opts = {
-        'format': 'bestaudio/best',
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'opus',
-            'preferredquality': '192',
-        }]
-    }
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=False)
-    url = info['formats'][0]['url']
-    ffmpeg_opts = {'before_options': '-reconnect 1 -reconnect_streamed 1'
-                                     ' -reconnect_delay_max 5',
-                   'options': '-vn'}
-    return discord.FFmpegPCMAudio(url, **ffmpeg_opts)
+    return discord.FFmpegOpusAudio(url, **ffmpeg_opts), title

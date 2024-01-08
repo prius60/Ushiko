@@ -37,6 +37,7 @@ async def summon(ctx):
 
     # Disconnect if bot is connected to a different channel within the same server
     if ctx.guild.voice_client is not None:
+        await dismiss(ctx)
         await ctx.guild.voice_client.disconnect(force=True)
     await destination.connect()
 
@@ -81,9 +82,9 @@ async def play(ctx, *args):
             queue.enqueue(url)
 
     voice = ctx.guild.voice_client
-    if voice is None or not voice.is_playing():
+    if voice is None or not voice.is_playing() or voice.channel != channel:
         url = queue.dequeue()
-        if voice is None:
+        if voice is None or voice.channel != channel:
             await summon(ctx)
             queue_dict[channel].clear()
             print('Ushiko is now connected to users voice channel')

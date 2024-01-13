@@ -113,7 +113,7 @@ async def loop(ctx):
     else:
         return
     queue.is_looping = not queue.is_looping
-    await ctx.send("**Now looping**" if not queue.is_looping else "**Looping is now off")
+    await ctx.send("**Now looping**" if queue.is_looping else "**Looping is now off**")
 
 
 @ushiko.command(aliases=['歌单', '播放列表'])

@@ -38,7 +38,6 @@ async def summon(ctx):
     # Disconnect if bot is connected to a different channel within the same server
     if ctx.guild.voice_client is not None:
         await dismiss(ctx)
-        await ctx.guild.voice_client.disconnect(force=True)
     await destination.connect()
 
 

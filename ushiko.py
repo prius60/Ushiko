@@ -5,7 +5,7 @@ from discord.ext import commands
 import media_fetcher
 import media_queue
 import asyncio
-import youtube_dl
+import yt_dlp
 import ssl
 
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -91,7 +91,7 @@ async def play(ctx, *args):
         audio, title = media_fetcher.get_audio_and_title(url)
         try:
             voice.play(audio, after=lambda e: asyncio.run_coroutine_threadsafe(skip(ctx), ushiko.loop))
-        except youtube_dl.utils.DownloadError:
+        except yt_dlp.utils.DownloadError:
             await ctx.send(':x: **   Media source unsupported**')
         if voice.is_playing() and not queue.is_looping:
             await ctx.send(f'**Now playing: **' + f'{title}')

@@ -1,7 +1,7 @@
 import validators
 from youtube_search import YoutubeSearch
 import discord
-import youtube_dl
+import yt_dlp
 from bilibili_api import misc
 import ssl
 
@@ -57,12 +57,12 @@ def get_audio_and_title(url: str) -> (discord.FFmpegOpusAudio, str):
             'preferredquality': '192',
         }]
     }
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.cache.remove()
         info = ydl.extract_info(url, download=False)
-    url = info['formats'][0]['url']
-    title = info.get('title', url)
-    ffmpeg_opts = {'before_options': '-reconnect 1 -reconnect_streamed 1'
-                                     ' -reconnect_delay_max 5',
-                   'options': '-vn'}
-    return discord.FFmpegOpusAudio(url, **ffmpeg_opts), title
+        url = info['url']
+        title = info.get('title', url)
+        ffmpeg_opts = {'before_options': '-reconnect 1 -reconnect_streamed 1'
+                                         ' -reconnect_delay_max 5',
+                       'options': '-vn'}
+        return discord.FFmpegOpusAudio(url, **ffmpeg_opts), title

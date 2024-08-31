@@ -3,3 +3,4 @@ validators
 PyNaCl
 youtube_search
 bilibili_api
+yt-dlp

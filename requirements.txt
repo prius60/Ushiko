@@ -1,4 +1,4 @@
-discord
+discord.py
 validators
 PyNaCl
 youtube_search

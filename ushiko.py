@@ -37,6 +37,8 @@ async def summon(ctx):
 
     # Disconnect if bot is connected to a different channel within the same server
     if ctx.guild.voice_client is not None:
+        if ctx.guild.voice_client.channel == destination:
+            return  # Already in the correct channel
         await dismiss(ctx)
     await destination.connect()
 
@@ -88,7 +90,7 @@ async def play(ctx, *args):
             queue_dict[channel].clear()
             print('Ushiko is now connected to users voice channel')
             voice = ctx.guild.voice_client
-        audio, title = media_fetcher.get_audio_and_title(url)
+        audio, title = media_fetcher.get_audio_and_title(url, ctx.author.voice.channel.bitrate // 1000)
         try:
             voice.play(audio, after=lambda e: asyncio.run_coroutine_threadsafe(skip(ctx), ushiko.loop))
         except yt_dlp.utils.DownloadError:

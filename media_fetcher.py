@@ -28,7 +28,7 @@ async def get_url(keyword, source: str = 'YouTube') -> str:
         raise NotImplementedError
 
 
-def get_keyword(*args) -> (str, str):
+def get_keyword(*args) -> tuple[str, str]:
     source = 'YouTube'
     if len(args) == 0 or args[0] is None:
         return '', source
@@ -45,24 +45,27 @@ def get_keyword(*args) -> (str, str):
     return keyword, source
 
 
-def get_audio_and_title(url: str) -> (discord.FFmpegOpusAudio, str):
+def get_audio_and_title(url: str, bitrate) -> tuple[discord.FFmpegOpusAudio, str]:
     """Return an Opus audio from <url> provided
 
     """
     ydl_opts = {
-        'format': 'bestaudio/best',
+        'format': 'ba[format_id!$=-drc]/bestaudio',
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'opus',
-            'preferredquality': '192',
-        }]
+            'preferredquality': f'{bitrate}',
+        }],
+        'noplaylist': True,
+        'nocheckcertificate': True
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.cache.remove()
         info = ydl.extract_info(url, download=False)
         url = info['url']
         title = info.get('title', url)
-        ffmpeg_opts = {'before_options': '-reconnect 1 -reconnect_streamed 1'
-                                         ' -reconnect_delay_max 5',
-                       'options': '-vn'}
+        ffmpeg_opts = {
+            'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 2',
+            'options': f'-vn -f opus -ab {bitrate}k -af "volume=-5dB"'
+        }
         return discord.FFmpegOpusAudio(url, **ffmpeg_opts), title

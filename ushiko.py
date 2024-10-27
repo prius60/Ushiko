@@ -12,9 +12,7 @@ ssl._create_default_https_context = ssl._create_unverified_context
 intents = discord.Intents.all()
 ushiko = commands.Bot(command_prefix='', intents=intents)
 queue_dict = {}
-
-
-# queue = media_queue.Queue()
+audio_dict = {}
 
 
 @ushiko.event
@@ -30,17 +28,17 @@ async def on_ready():
 
 @ushiko.command(aliases=['来'])
 async def summon(ctx):
-    """Join the user's voice channel
-
-    """
-    destination = ctx.author.voice.channel
-
+    """Join the user's voice channel"""
+    voice = ctx.guild.voice_client
+    dest = ctx.author.voice.channel
+    
     # Disconnect if bot is connected to a different channel within the same server
-    if ctx.guild.voice_client is not None:
-        if ctx.guild.voice_client.channel == destination:
-            return  # Already in the correct channel
+    if voice and voice.channel != dest:
         await dismiss(ctx)
-    await destination.connect()
+    elif voice and voice.channel == dest:
+        return
+        
+    await dest.connect()
 
 
 @ushiko.command(aliases=['滚'])
@@ -57,50 +55,67 @@ async def dismiss(ctx):
 
 @ushiko.command(aliases=['整活', '播放', '继续'])
 async def play(ctx, *args):
-    """Play audio from the provided source and keyword. Supports media from YouTube
-    and BiliBili
-
-    """
+    """Play audio from the provided source and keyword. Supports YouTube and BiliBili"""
+    # Get or create queue for this channel
     channel = ctx.author.voice.channel
-    if channel in queue_dict:
-        queue = queue_dict[channel]
-    else:
-        queue_dict[channel] = media_queue.Queue()
-        queue = queue_dict[channel]
-    if len(args) == 0:
+    queue = queue_dict.get(channel, media_queue.Queue())
+    queue_dict[channel] = queue
+    
+    # Handle no arguments (resume or error)
+    if not args:
         if queue.is_paused:
             ctx.guild.voice_client.resume()
             queue.is_paused = False
             return
         elif queue.is_empty():
             await ctx.send(':x: **   Provide a link or search with keywords**')
+            return
     else:
+        # Add new song to queue
         keyword, source = media_fetcher.get_keyword(*args)
         url = await media_fetcher.get_url(keyword, source)
-        if queue.is_looping and (queue.current_song == "" or url == queue.current_song):
+        
+        if queue.is_looping and (not queue.current_song or url == queue.current_song):
             queue.enqueue_with_priority(url)
         else:
             queue.enqueue(url)
 
+    # If nothing is playing, start playback
     voice = ctx.guild.voice_client
-    if voice is None or not voice.is_playing() or voice.channel != channel:
-        url = queue.dequeue()
-        if voice is None or voice.channel != channel:
-            await summon(ctx)
-            queue_dict[channel].clear()
-            print('Ushiko is now connected to users voice channel')
-            voice = ctx.guild.voice_client
-        audio, title = media_fetcher.get_audio_and_title(url, ctx.author.voice.channel.bitrate // 1000)
-        try:
-            voice.play(audio, after=lambda e: asyncio.run_coroutine_threadsafe(skip(ctx), ushiko.loop))
-        except yt_dlp.utils.DownloadError:
-            await ctx.send(':x: **   Media source unsupported**')
-        if voice.is_playing() and not queue.is_looping:
-            await ctx.send(f'**Now playing: **' + f'{title}')
-            print(f'Playing {title}')
+    if not voice or not voice.is_playing() or voice.channel != channel:
+        await play_next_song(ctx, queue, channel)
     else:
         print(f'Added to playlist: {url}')
         await ctx.send(f'**Added to playlist: **{url}')
+
+
+async def play_next_song(ctx, queue, channel):
+    """Helper function to play the next song"""
+    url = queue.dequeue()
+    voice = ctx.guild.voice_client
+    
+    # Ensure bot is in the correct channel
+    if not voice or voice.channel != channel:
+        await summon(ctx)
+        queue_dict[channel].clear()
+        print('Ushiko is now connected to users voice channel')
+        voice = ctx.guild.voice_client
+
+    # Play the audio
+    try:
+        audio, title = media_fetcher.get_audio_and_title(url, ctx.author.voice.channel.bitrate // 1000)
+        voice.play(audio, after=lambda e: asyncio.run_coroutine_threadsafe(skip(ctx), ushiko.loop))
+        
+        # Clean up previous audio
+        if channel in audio_dict:
+            audio_dict[channel].cleanup()
+        audio_dict[channel] = audio
+        
+        if voice.is_playing() and not queue.is_looping:
+            await ctx.send(f'**Now playing: **{title}')
+            print(f'Playing {title}')
+    except yt_dlp.utils.DownloadError:
+        await ctx.send(':x: **   Media source unsupported**')
 
 
 @ushiko.command(aliases=['洗脑', '循环'])
@@ -209,6 +224,18 @@ async def pause(ctx):
     if channel in queue_dict:
         queue_dict[channel].is_paused = True
 
+
+@ushiko.event
+async def on_voice_state_update(member, before, after):
+    """ Clean up
+    
+    """
+    if member == ushiko.user:
+        # If the bot has disconnected from a voice channel
+        if before.channel is not None and after.channel is None:
+            if before.channel in audio_dict:
+                audio_dict[before.channel].cleanup()
+                audio_dict.pop(before.channel)
 
 # Replace with your bot's token to activate
 ushiko.run(os.environ['BOT_TOKEN'])

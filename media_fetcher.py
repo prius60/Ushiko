@@ -66,6 +66,7 @@ def get_audio_and_title(url: str, bitrate) -> tuple[discord.FFmpegOpusAudio, str
         title = info.get('title', url)
         ffmpeg_opts = {
             'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 2',
-            'options': f'-vn -f opus -ab {bitrate}k -af "volume=-5dB"'
+            'options': f'-vn -f opus -ab {bitrate}k -af "volume=-5dB"',
+            'bitrate': bitrate
         }
         return discord.FFmpegOpusAudio(url, **ffmpeg_opts), title

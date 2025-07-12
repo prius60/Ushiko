@@ -6,9 +6,9 @@ import media_fetcher
 import media_queue
 import asyncio
 import yt_dlp
-import ssl
+# import ssl
 
-ssl._create_default_https_context = ssl._create_unverified_context
+# ssl._create_default_https_context = ssl._create_unverified_context
 intents = discord.Intents.all()
 ushiko = commands.Bot(command_prefix='', intents=intents)
 queue_dict = {}

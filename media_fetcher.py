@@ -50,14 +50,16 @@ def get_audio_and_title(url: str, bitrate) -> tuple[discord.FFmpegOpusAudio, str
 
     """
     ydl_opts = {
-        'format': 'ba[format_id!$=-drc]/bestaudio',
+        'format': 'bestaudio/best',
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'opus',
             'preferredquality': f'{bitrate}',
         }],
         'noplaylist': True,
-        'nocheckcertificate': True
+        'nocheckcertificate': True,
+        'extractaudio': True,
+        'forceurl': True,
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.cache.remove()

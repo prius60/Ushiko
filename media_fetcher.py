@@ -2,7 +2,7 @@ import validators
 from youtube_search import YoutubeSearch
 import discord
 import yt_dlp
-from bilibili_api import misc
+from bilibili_api import search
 import ssl
 
 
@@ -21,7 +21,7 @@ async def get_url(keyword, source: str = 'YouTube') -> str:
         r = YoutubeSearch(keyword, max_results=1).to_dict()[0]['url_suffix']
         return f'https://youtube.com{r}'
     elif source.lower() == 'bili' or source.lower() == 'bilibili':
-        result = await misc.web_search_by_type(keyword, 'video')
+        result = await search.search_by_type(keyword=keyword, search_type=search.SearchObjectType.VIDEO)
         return result['result'][0]['arcurl']
     else:
         # TODO: add support for additional websites
@@ -50,25 +50,34 @@ def get_audio_and_title(url: str, bitrate) -> tuple[discord.FFmpegOpusAudio, str
 
     """
     ydl_opts = {
-        'format': 'bestaudio/best',
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'opus',
-            'preferredquality': f'{bitrate}',
-        }],
+        'format': 'ba',
         'noplaylist': True,
         'nocheckcertificate': True,
-        'extractaudio': True,
-        'forceurl': True,
+        'quiet': False,
+        'verbose': True,
     }
+
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36'
+    }
+
+    if 'bilibili.com' in url or 'b23.tv' in url:
+        headers.update({
+            'Referer': url,
+            'Origin': 'https://www.bilibili.com'
+        })
+        ydl_opts.update({
+            'impersonate': yt_dlp.networking.impersonate.ImpersonateTarget.from_str('chrome'),
+        })
+
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.cache.remove()
         info = ydl.extract_info(url, download=False)
         url = info['url']
         title = info.get('title', url)
+        header_str = ''.join([f'{k}: {v}\r\n' for k, v in headers.items()])
         ffmpeg_opts = {
-            'before_options': '-reconnect 1 -reconnect_streamed 1',
+            'before_options': f'-headers "{header_str}" -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
             'options': f'-vn -f opus -ab {bitrate}k -af "volume=-5dB"',
-            'bitrate': bitrate
         }
         return discord.FFmpegOpusAudio(url, **ffmpeg_opts), title

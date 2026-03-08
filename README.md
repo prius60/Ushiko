@@ -8,7 +8,7 @@ A simple discord bot for audio stream
 - Queued playback
 
 ## Requirements
-- Python 3.8+
+- Python 3.10
 - ffmpeg
 - Packages required in Requirements.txt, which can be installed with <b>pip install \<package name\></b>
 
